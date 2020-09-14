@@ -1,15 +1,16 @@
 http:
   port: 8080
+  host: localhost
 admin:
   port: 9876
-  hostname: localhost
+  host: localhost
 apiEndpoints:
-  api:
+  farmicode:
     host: localhost
-    paths: '/ip'
+    paths: '/farmicode/*'
 serviceEndpoints:
-  httpbin:
-    url: 'https://httpbin.org'
+  farmicode:
+    url: https://my-json-server.typicode.com/marmicode/farmicode-api
 policies:
   - basic-auth
   - cors
@@ -20,13 +21,12 @@ policies:
   - proxy
   - rate-limit
 pipelines:
-  default:
+  - name: farmicode
     apiEndpoints:
-      - api
+      - farmicode
     policies:
-    # Uncomment `key-auth:` when instructed to in the Getting Started guide.
-    # - key-auth:
       - proxy:
           - action:
-              serviceEndpoint: httpbin 
+              serviceEndpoint: farmicode
               changeOrigin: true
+              stripPath: true
