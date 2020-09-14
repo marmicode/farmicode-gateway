@@ -1,7 +1,16 @@
 const fs = require('fs');
 const { PassThrough } = require('stream');
 const yaml = require('yamljs');
-const { OpenApiValidator } = require('express-openapi-validate');
+const {
+  OpenApiContext,
+} = require('express-openapi-validator/dist/framework/openapi.context');
+const {
+  OpenApiSpecLoader,
+} = require('express-openapi-validator/dist/framework/openapi.spec.loader');
+const {
+  RequestValidator,
+  applyOpenApiMetadata,
+} = require('express-openapi-validator/dist/middlewares');
 const { json } = require('express');
 const { promisify } = require('util');
 
@@ -23,35 +32,49 @@ module.exports = {
         },
         required: ['openapiPath'],
       },
-      policy: ({ basePath, openapiPath }) => {
-        const openapiSpecification = yaml.parse(
-          fs.readFileSync(openapiPath, 'utf-8')
+      policy: ({ openapiPath }) => {
+        const specPromise = new OpenApiSpecLoader({
+          apiDoc: openapiPath,
+          $refParser: {
+            mode: 'dereference',
+          },
+        }).load();
+
+        const validatorPromise = specPromise.then(
+          (spec) => new RequestValidator(spec)
         );
 
-        const openapiValidator = new OpenApiValidator(openapiSpecification);
-
         return async (req, res, next) => {
-          /* Remove base path. */
-          const path = basePath ? req.path.replace(basePath, '') : req.path;
+          const spec = await specPromise;
+
+          const validator = await validatorPromise;
 
           /* Backup request stream. */
           req.egContext.requestStream = new PassThrough();
           req.pipe(req.egContext.requestStream);
 
-          await promisify(json())(req, res);
+          try {
+            await promisify(json())(req, res);
+          } catch {
+            res.sendStatus(400);
+            return;
+          }
+
+          await promisify(applyOpenApiMetadata(new OpenApiContext(spec)))(
+            req,
+            res
+          );
 
           try {
-            await promisify(
-              openapiValidator.validate(req.method.toLowerCase(), path)
-            )(req, res);
-            next();
+            await promisify(validator.validate.bind(validator))(req, res);
           } catch (err) {
-            res.status(400);
+            res.status(err.status);
             res.send({
-              error: 'validation-error',
-              ...err.data[0],
+              errors: err.errors,
             });
           }
+
+          next();
         };
       },
     }),

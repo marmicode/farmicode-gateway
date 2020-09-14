@@ -7,7 +7,7 @@
   "main": "server.js",
   "dependencies": {
     "express-gateway": "1.16.10",
-    "express-openapi-validate": "0.5.1",
+    "express-openapi-validator": "3.17.1",
     "yamljs": "0.3.0"
   }
 }

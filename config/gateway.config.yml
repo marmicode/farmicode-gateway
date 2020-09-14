@@ -21,7 +21,6 @@ pipelines:
     policies:
       - openapi-validator:
           - action:
-              basePath: /farmicode
               openapiPath: ./config/farmicode.yaml
       - proxy:
           - action:
