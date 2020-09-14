@@ -38,16 +38,7 @@ module.exports = {
         return async (req, res, next) => {
           const validator = await validatorPromise;
 
-          /* Backup request stream. */
-          req.egContext.requestStream = new PassThrough();
-          req.pipe(req.egContext.requestStream);
-
-          try {
-            await promisify(json())(req, res);
-          } catch {
-            res.sendStatus(400);
-            return;
-          }
+          await parseReqJson(req, res);
 
           await validator(req, res);
 
@@ -56,6 +47,19 @@ module.exports = {
       },
     }),
 };
+
+async function parseReqJson(req, res) {
+  /* Backup request stream. */
+  req.egContext.requestStream = new PassThrough();
+  req.pipe(req.egContext.requestStream);
+
+  try {
+    await promisify(json())(req, res);
+  } catch {
+    res.sendStatus(400);
+    return;
+  }
+}
 
 async function getOpenapiValidator(openapiSpecPath) {
   const spec = await new OpenApiSpecLoader({
