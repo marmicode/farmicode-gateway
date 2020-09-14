@@ -26,27 +26,16 @@ module.exports = {
         $id: 'openapi-validator',
         type: 'object',
         properties: {
-          openapiPath: {
+          openapiSpecPath: {
             type: 'string',
           },
         },
-        required: ['openapiPath'],
+        required: ['openapiSpecPath'],
       },
-      policy: ({ openapiPath }) => {
-        const specPromise = new OpenApiSpecLoader({
-          apiDoc: openapiPath,
-          $refParser: {
-            mode: 'dereference',
-          },
-        }).load();
-
-        const validatorPromise = specPromise.then(
-          (spec) => new RequestValidator(spec)
-        );
+      policy: ({ openapiSpecPath }) => {
+        const validatorPromise = getOpenapiValidator(openapiSpecPath);
 
         return async (req, res, next) => {
-          const spec = await specPromise;
-
           const validator = await validatorPromise;
 
           /* Backup request stream. */
@@ -60,22 +49,36 @@ module.exports = {
             return;
           }
 
-          await promisify(applyOpenApiMetadata(new OpenApiContext(spec)))(
-            req,
-            res
-          );
-
-          try {
-            await promisify(validator.validate.bind(validator))(req, res);
-          } catch (err) {
-            res.status(err.status);
-            res.send({
-              errors: err.errors,
-            });
-          }
+          await validator(req, res);
 
           next();
         };
       },
     }),
 };
+
+async function getOpenapiValidator(openapiSpecPath) {
+  const spec = await new OpenApiSpecLoader({
+    apiDoc: openapiSpecPath,
+    $refParser: {
+      mode: 'dereference',
+    },
+  }).load();
+
+  const validator = new RequestValidator(spec);
+
+  return async (req, res) => {
+    /* Add openapi metadata to request. */
+    await promisify(applyOpenApiMetadata(new OpenApiContext(spec)))(req, res);
+
+    /* Validate request. */
+    try {
+      await promisify(validator.validate.bind(validator))(req, res);
+    } catch (err) {
+      res.status(err.status);
+      res.send({
+        errors: err.errors,
+      });
+    }
+  };
+}
