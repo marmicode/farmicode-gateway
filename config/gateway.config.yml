@@ -12,19 +12,17 @@ serviceEndpoints:
   farmicode:
     url: https://my-json-server.typicode.com/marmicode/farmicode-api
 policies:
-  - basic-auth
-  - cors
-  - expression
-  - key-auth
-  - log
-  - oauth2
+  - openapi-validator
   - proxy
-  - rate-limit
 pipelines:
   - name: farmicode
     apiEndpoints:
       - farmicode
     policies:
+      - openapi-validator:
+          - action:
+              basePath: /farmicode
+              openapiPath: ./config/farmicode.yaml
       - proxy:
           - action:
               serviceEndpoint: farmicode
