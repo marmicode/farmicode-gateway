@@ -6,8 +6,12 @@
   "version": "1.0.0",
   "main": "server.js",
   "dependencies": {
+    "axios": "0.20.0",
     "express-gateway": "1.16.10",
     "express-openapi-validator": "3.17.1",
+    "jsonwebtoken": "8.5.1",
+    "jwk-to-pem": "2.0.4",
+    "uuid": "8.3.0",
     "yamljs": "0.3.0"
   }
 }
