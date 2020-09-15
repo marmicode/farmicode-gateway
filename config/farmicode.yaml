@@ -21,7 +21,7 @@ paths:
                   $ref: '#/components/schemas/Farm'
       security:
         - openId:
-            - farm.read
+            - farms.read
     post:
       tags:
         - Farm
@@ -39,12 +39,12 @@ paths:
                 $ref: '#/components/schemas/Farm'
       security:
         - openId:
-            - farm.write
+            - farms.write
 components:
   securitySchemes:
     openId:
       type: openIdConnect
-      openIdConnectUrl: https://marmicode.eu.auth0.com/.well-known/openid-configuration
+      openIdConnectUrl: https://farmicode.eu.auth0.com/.well-known/openid-configuration
   schemas:
     FarmRequest:
       additionalProperties: false

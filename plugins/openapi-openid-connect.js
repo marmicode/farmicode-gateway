@@ -86,77 +86,94 @@ module.exports = {
             return;
           }
 
-          const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
-
-          if (token == null) {
-            res.sendStatus(401);
-            return;
-          }
-
-          /* Get kid from token. */
-          const { kid } = jwt.decode(token, { complete: true })?.header;
-
           const requiredScopes = schemeInfo.requiredScopes;
-
           const { issuer, jwks } = openidSchemesMap.get(schemeInfo.name);
 
-          const jwk = jwks.find((jwk) => jwk.kid === kid);
-
-          /* Key not found. */
-          if (jwk == null) {
-            res.sendStatus(401);
-            return;
-          }
-
-          const strategy = new JwtStrategy(
-            {
-              algorithms,
-              jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-              secretOrKey: jwkToPem(jwk),
-              issuer,
-              audience,
-            },
-            /* Using an object with claims property
-             * containing JWT claims as the user object. */
-            callbackify(async (claims) => {
-              const tokenScopes = claims.scopes?.split(' ');
-              if (
-                !requiredScopes.every((scope) => tokenScopes?.includes(scope))
-              ) {
-                throw new Error(
-                  `some required scopes are missing: ${requiredScopes}`
-                );
-              }
-
-              /* Return `{claims}` as the user object to passport. */
-              return { claims };
-            })
-          );
-
-          /* Making sure passport strategy doesn't collide with another instance with a different configuration. */
-          const strategyId = `openid-connect-${uuid.v4()}`;
-
-          passport.use(strategyId, strategy);
-
-          try {
-            await promisify(
-              passport.authenticate(strategyId, {
-                session: false,
-              })
-            )(req, res);
-            next();
-          } catch {
-            res.status(403);
-            res.send({
-              errors: [
-                {
-                  errorCode: 'missing-scopes',
-                  requiredScopes,
-                },
-              ],
-            });
-          }
+          await authenticate({
+            req,
+            res,
+            next,
+            audience,
+            algorithms,
+            issuer,
+            jwks,
+            requiredScopes,
+          });
         };
       },
     }),
 };
+
+async function authenticate({
+  req,
+  res,
+  next,
+  audience,
+  algorithms,
+  issuer,
+  jwks,
+  requiredScopes,
+}) {
+  const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+
+  if (token == null) {
+    res.sendStatus(401);
+    return;
+  }
+
+  /* Get kid from token. */
+  const { kid } = jwt.decode(token, { complete: true })?.header;
+
+  const jwk = jwks.find((jwk) => jwk.kid === kid);
+
+  /* Key not found. */
+  if (jwk == null) {
+    res.sendStatus(401);
+    return;
+  }
+
+  const strategy = new JwtStrategy(
+    {
+      algorithms,
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      secretOrKey: jwkToPem(jwk),
+      issuer,
+      audience,
+    },
+    /* Using an object with claims property
+     * containing JWT claims as the user object. */
+    callbackify(async (claims) => {
+      const tokenScopes = claims.scope?.split(' ');
+      if (!requiredScopes.every((scope) => tokenScopes?.includes(scope))) {
+        throw new Error(`some required scopes are missing: ${requiredScopes}`);
+      }
+
+      /* Return `{claims}` as the user object to passport. */
+      return { claims };
+    })
+  );
+
+  /* Making sure passport strategy doesn't collide with another instance with a different configuration. */
+  const strategyId = `openid-connect-${uuid.v4()}`;
+
+  passport.use(strategyId, strategy);
+
+  try {
+    await promisify(
+      passport.authenticate(strategyId, {
+        session: false,
+      })
+    )(req, res);
+    next();
+  } catch (err) {
+    res.status(403);
+    res.send({
+      errors: [
+        {
+          errorCode: 'missing-scopes',
+          requiredScopes,
+        },
+      ],
+    });
+  }
+}

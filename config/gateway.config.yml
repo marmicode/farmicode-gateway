@@ -22,7 +22,7 @@ pipelines:
     policies:
       - openapi-openid-connect:
           - action:
-              audience: 'https://sheep.marmicode.io'
+              audience: 'https://farmicode.io'
               openapiSpecPath: ./config/farmicode.yaml
       - openapi-request-validator:
           - action:
