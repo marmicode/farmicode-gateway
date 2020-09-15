@@ -40,6 +40,10 @@ module.exports = {
          * as we want the gateway to be stateless. */
         return async (req, res, next) => {
           const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
+          if (token == null) {
+            next();
+            return;
+          }
 
           const jwks = await jwksPromise;
 
@@ -62,8 +66,9 @@ module.exports = {
               issuer: openidProvider,
               audience,
             },
-            /* Using JWT claims as the user object. */
-            (jwtPayload, done) => done(null, jwtPayload)
+            /* Using an object with claims property
+             * containing JWT claims as the user object. */
+            (claims, done) => done(null, { claims })
           );
 
           /* Making sure passport strategy doesn't collide with another instance with a different configuration. */

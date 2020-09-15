@@ -19,6 +19,9 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Farm'
+      security:
+        - openIdConnect:
+            - farm.read
     post:
       tags:
         - Farm
@@ -35,11 +38,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Farm'
       security:
-        - openId:
-            - sheep.write
+        - openIdConnect:
+            - farm.write
 components:
   securitySchemes:
-    openId:
+    openIdConnect:
       type: openIdConnect
       openIdConnectUrl: https://farmicode.eu.auth0.com/.well-known/openid-configuration
   schemas:

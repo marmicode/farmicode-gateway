@@ -10,6 +10,7 @@ const {
 const {
   RequestValidator,
   applyOpenApiMetadata,
+  security,
 } = require('express-openapi-validator/dist/middlewares');
 const { json } = require('express');
 const { promisify } = require('util');
@@ -36,11 +37,11 @@ module.exports = {
         const validatorPromise = getOpenapiValidator(openapiSpecPath);
 
         return async (req, res, next) => {
-          const validator = await validatorPromise;
+          const validate = await validatorPromise;
 
           await parseReqJson(req, res);
 
-          await validator(req, res);
+          await validate(req, res);
 
           next();
         };
@@ -72,8 +73,34 @@ async function getOpenapiValidator(openapiSpecPath) {
   const validator = new RequestValidator(spec);
 
   return async (req, res) => {
+    const openApiContext = new OpenApiContext(spec);
+
     /* Add openapi metadata to request. */
-    await promisify(applyOpenApiMetadata(new OpenApiContext(spec)))(req, res);
+    await promisify(applyOpenApiMetadata(openApiContext))(req, res);
+
+    /* Validate security. */
+    try {
+      await promisify(
+        security(openApiContext, {
+          openIdConnect(req, scopes, schema) {
+            const requestScopes = req?.user?.claims?.scopes ?? [];
+            /* Fail if consumer doesn't have all scopes defined in openapi specification. */
+            if (scopes.every((scope) => requestScopes.includes(scope))) {
+              return true;
+            }
+            throw {
+              status: 403,
+              message: `route requires scopes: ${scopes}`,
+              errorCode: 'forbidden',
+            };
+          },
+        })
+      )(req, res);
+    } catch (err) {
+      res.status(403);
+      res.send({ errors: err.errors });
+      return;
+    }
 
     /* Validate request. */
     try {
