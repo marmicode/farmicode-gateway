@@ -42,7 +42,7 @@ module.exports = {
       policy: ({ algorithms = ['RS256'], audience, openapiSpecPath }) => {
         const specPromise = getOpenapiSpecification(openapiSpecPath);
 
-        const schemesMapPromise = specPromise.then(async (spec) => {
+        const openidSchemesMapPromise = specPromise.then(async (spec) => {
           return new Map(
             await Promise.all(
               Object.entries(spec.apiDoc.components?.securitySchemes ?? [])
@@ -62,13 +62,26 @@ module.exports = {
         return async (req, res, next) => {
           const spec = await specPromise;
 
+          const openidSchemesMap = await openidSchemesMapPromise;
+
           /* Add openapi metadata to request. */
           await applyMetadata({ spec, req, res });
 
-          const securitySchemeList = req.openapi.schema.security;
+          const securitySchemeList = req.openapi.schema.security ?? [];
 
-          /* Skip policy if no security schemes are defined for this route. */
-          if (securitySchemeList == null || securitySchemeList.length === 0) {
+          /* Find the first openidConnect scheme. */
+          const schemeInfo = securitySchemeList
+            .map((scheme) => {
+              const name = Object.keys(scheme)[0];
+              return {
+                name,
+                requiredScopes: scheme[name],
+              };
+            })
+            .find(({ name }) => openidSchemesMap.has(name));
+
+          /* Skip policy if no openidConnect security schemes are defined for this route. */
+          if (schemeInfo == null) {
             next();
             return;
           }
@@ -83,71 +96,65 @@ module.exports = {
           /* Get kid from token. */
           const { kid } = jwt.decode(token, { complete: true })?.header;
 
-          const schemesMap = await schemesMapPromise;
+          const requiredScopes = schemeInfo.requiredScopes;
 
-          for (let securityScheme of securitySchemeList) {
-            const securitySchemeName = Object.keys(securityScheme)[0];
-            const requiredScopes = securityScheme[securitySchemeName];
+          const { issuer, jwks } = openidSchemesMap.get(schemeInfo.name);
 
-            const { issuer, jwks } = schemesMap.get(securitySchemeName);
+          const jwk = jwks.find((jwk) => jwk.kid === kid);
 
-            const jwk = jwks.find((jwk) => jwk.kid === kid);
+          /* Key not found. */
+          if (jwk == null) {
+            res.sendStatus(401);
+            return;
+          }
 
-            /* Key not found. */
-            if (jwk == null) {
-              res.sendStatus(401);
-              return;
-            }
+          const strategy = new JwtStrategy(
+            {
+              algorithms,
+              jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+              secretOrKey: jwkToPem(jwk),
+              issuer,
+              audience,
+            },
+            /* Using an object with claims property
+             * containing JWT claims as the user object. */
+            callbackify(async (claims) => {
+              const tokenScopes = claims.scopes?.split(' ');
+              if (
+                !requiredScopes.every((scope) => tokenScopes?.includes(scope))
+              ) {
+                throw new Error(
+                  `some required scopes are missing: ${requiredScopes}`
+                );
+              }
 
-            const strategy = new JwtStrategy(
-              {
-                algorithms,
-                jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-                secretOrKey: jwkToPem(jwk),
-                issuer,
-                audience,
-              },
-              /* Using an object with claims property
-               * containing JWT claims as the user object. */
-              callbackify(async (claims) => {
-                const tokenScopes = claims.scopes?.split(' ');
-                if (
-                  !requiredScopes.every((scope) => tokenScopes?.includes(scope))
-                ) {
-                  throw new Error(
-                    `some required scopes are missing: ${requiredScopes}`
-                  );
-                }
+              /* Return `{claims}` as the user object to passport. */
+              return { claims };
+            })
+          );
 
-                /* Return `{claims}` as the user object to passport. */
-                return { claims };
+          /* Making sure passport strategy doesn't collide with another instance with a different configuration. */
+          const strategyId = `openid-connect-${uuid.v4()}`;
+
+          passport.use(strategyId, strategy);
+
+          try {
+            await promisify(
+              passport.authenticate(strategyId, {
+                session: false,
               })
-            );
-
-            /* Making sure passport strategy doesn't collide with another instance with a different configuration. */
-            const strategyId = `openid-connect-${uuid.v4()}`;
-
-            passport.use(strategyId, strategy);
-
-            try {
-              await promisify(
-                passport.authenticate(strategyId, {
-                  session: false,
-                })
-              )(req, res);
-              next();
-            } catch {
-              res.status(403);
-              res.send({
-                errors: [
-                  {
-                    errorCode: 'missing-scopes',
-                    requiredScopes,
-                  },
-                ],
-              });
-              continue;
-            }
+            )(req, res);
+            next();
+          } catch {
+            res.status(403);
+            res.send({
+              errors: [
+                {
+                  errorCode: 'missing-scopes',
+                  requiredScopes,
+                },
+              ],
+            });
           }
         };
       },
