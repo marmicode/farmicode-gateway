@@ -1,30 +1,27 @@
-const fs = require('fs');
 const { PassThrough } = require('stream');
-const yaml = require('yamljs');
-const {
-  OpenApiContext,
-} = require('express-openapi-validator/dist/framework/openapi.context');
-const {
-  OpenApiSpecLoader,
-} = require('express-openapi-validator/dist/framework/openapi.spec.loader');
 const {
   RequestValidator,
-  applyOpenApiMetadata,
-  security,
 } = require('express-openapi-validator/dist/middlewares');
 const { json } = require('express');
 const { promisify } = require('util');
 
+const {
+  applyMetadata,
+  getOpenapiSpecification,
+} = require('./lib/openapi-utils');
+
+const pluginName = 'openapi-request-validator';
+
 module.exports = {
   version: '0.1.0',
   schema: {
-    $id: 'openapi-validator',
+    $id: `${pluginName}-plugin-schema`,
   },
   init: (pluginContext) =>
     pluginContext.registerPolicy({
-      name: 'openapi-validator',
+      name: pluginName,
       schema: {
-        $id: 'openapi-validator',
+        $id: `${pluginName}-policy-schema`,
         type: 'object',
         properties: {
           openapiSpecPath: {
@@ -63,44 +60,13 @@ async function parseReqJson(req, res) {
 }
 
 async function getOpenapiValidator(openapiSpecPath) {
-  const spec = await new OpenApiSpecLoader({
-    apiDoc: openapiSpecPath,
-    $refParser: {
-      mode: 'dereference',
-    },
-  }).load();
+  const spec = await getOpenapiSpecification(openapiSpecPath);
 
   const validator = new RequestValidator(spec);
 
   return async (req, res) => {
-    const openApiContext = new OpenApiContext(spec);
-
     /* Add openapi metadata to request. */
-    await promisify(applyOpenApiMetadata(openApiContext))(req, res);
-
-    /* Validate security. */
-    try {
-      await promisify(
-        security(openApiContext, {
-          openIdConnect(req, scopes, schema) {
-            const requestScopes = req?.user?.claims?.scopes ?? [];
-            /* Fail if consumer doesn't have all scopes defined in openapi specification. */
-            if (scopes.every((scope) => requestScopes.includes(scope))) {
-              return true;
-            }
-            throw {
-              status: 403,
-              message: `route requires scopes: ${scopes}`,
-              errorCode: 'forbidden',
-            };
-          },
-        })
-      )(req, res);
-    } catch (err) {
-      res.status(403);
-      res.send({ errors: err.errors });
-      return;
-    }
+    await applyMetadata({ spec, req, res });
 
     /* Validate request. */
     try {

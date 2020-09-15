@@ -12,21 +12,19 @@ serviceEndpoints:
   farmicode:
     url: https://my-json-server.typicode.com/marmicode/farmicode-api
 policies:
-  - openapi-validator
-  - openid-connect
+  - openapi-request-validator
+  - openapi-openid-connect
   - proxy
 pipelines:
   - name: farmicode
     apiEndpoints:
       - farmicode
     policies:
-      - openid-connect:
+      - openapi-openid-connect:
           - action:
-              openidProvider: https://marmicode.eu.auth0.com/
-              audience: https://sheep.marmicode.io
-              algorithms:
-                - RS256
-      - openapi-validator:
+              audience: 'https://sheep.marmicode.io'
+              openapiSpecPath: ./config/farmicode.yaml
+      - openapi-request-validator:
           - action:
               openapiSpecPath: ./config/farmicode.yaml
       - proxy:

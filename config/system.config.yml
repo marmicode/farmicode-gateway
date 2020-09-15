@@ -8,25 +8,25 @@ db:
 # express-gateway-plugin-example:
 #   param1: 'param from system.config'
 
-crypto:
-  cipherKey: sensitiveKey
-  algorithm: aes256
-  saltRounds: 10
+# crypto:
+#   cipherKey: sensitiveKey
+#   algorithm: aes256
+#   saltRounds: 10
 
 # OAuth2 Settings
-session:
-  secret: keyboard cat
-  resave: false
-  saveUninitialized: false
-accessTokens:
-  timeToExpiry: 7200000
-refreshTokens:
-  timeToExpiry: 7200000
-authorizationCodes:
-  timeToExpiry: 300000
+# session:
+#   secret: keyboard cat
+#   resave: false
+#   saveUninitialized: false
+# accessTokens:
+#   timeToExpiry: 7200000
+# refreshTokens:
+#   timeToExpiry: 7200000
+# authorizationCodes:
+#   timeToExpiry: 300000
 
 plugins:
-  openapi-validator:
-    package: './plugins/openapi-validator.js'
-  openid-connect:
-    package: './plugins/openid-connect.js'
+  openapi-openid-connect:
+    package: './plugins/openapi-openid-connect.js'
+  openapi-request-validator:
+    package: './plugins/openapi-request-validator.js'
