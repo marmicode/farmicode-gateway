@@ -148,8 +148,8 @@ async function authenticate({
         throw new Error(`some required scopes are missing: ${requiredScopes}`);
       }
 
-      /* Return `{claims}` as the user object to passport. */
-      return { claims };
+      /* Return `{id, claims}` as the user object to passport. */
+      return { id: claims.sub, claims };
     })
   );
 

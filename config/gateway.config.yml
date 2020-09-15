@@ -15,6 +15,7 @@ policies:
   - openapi-request-validator
   - openapi-openid-connect
   - proxy
+  - rate-limit
 pipelines:
   - name: farmicode
     apiEndpoints:
@@ -27,6 +28,12 @@ pipelines:
       - openapi-request-validator:
           - action:
               openapiSpecPath: ./config/farmicode.yaml
+      - rate-limit:
+          - action:
+              # Limit to 1 per 10 seconds based on the hostname
+              max: 3
+              windowMs: 30000
+              rateLimitBy: '${req.user.id}'
       - proxy:
           - action:
               serviceEndpoint: farmicode
