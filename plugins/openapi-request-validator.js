@@ -38,7 +38,15 @@ module.exports = {
 
           await parseReqJson(req, res);
 
-          await validate(req, res);
+          try {
+            await validate(req, res);
+          } catch (err) {
+            res.status(err.status);
+            res.send({
+              errors: err.errors,
+            });
+            return;
+          }
 
           next();
         };
@@ -69,13 +77,6 @@ async function getOpenapiValidator(openapiSpecPath) {
     await applyMetadata({ spec, req, res });
 
     /* Validate request. */
-    try {
-      await promisify(validator.validate.bind(validator))(req, res);
-    } catch (err) {
-      res.status(err.status);
-      res.send({
-        errors: err.errors,
-      });
-    }
+    await promisify(validator.validate.bind(validator))(req, res);
   };
 }
