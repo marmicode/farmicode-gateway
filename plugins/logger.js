@@ -37,6 +37,7 @@ module.exports = {
           requestWhitelist: [
             'headers.content-length',
             'headers.user-agent',
+            'ip',
             'method',
             'query',
             'url',
