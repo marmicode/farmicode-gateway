@@ -26,6 +26,8 @@ db:
 #   timeToExpiry: 300000
 
 plugins:
+  logger:
+    package: './plugins/logger.js'
   openapi-openid-connect:
     package: './plugins/openapi-openid-connect.js'
   openapi-request-validator:

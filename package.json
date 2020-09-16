@@ -9,9 +9,12 @@
     "axios": "0.20.0",
     "express-gateway": "1.16.10",
     "express-openapi-validator": "3.17.1",
+    "express-winston": "4.0.5",
     "jsonwebtoken": "8.5.1",
     "jwk-to-pem": "2.0.4",
     "uuid": "8.3.0",
+    "winston": "3.3.3",
+    "winston-tcp": "3.0.0",
     "yamljs": "0.3.0"
   }
 }

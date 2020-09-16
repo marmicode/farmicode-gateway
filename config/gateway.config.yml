@@ -12,6 +12,7 @@ serviceEndpoints:
   farmicode:
     url: https://my-json-server.typicode.com/marmicode/farmicode-api
 policies:
+  - logger
   - openapi-request-validator
   - openapi-openid-connect
   - proxy
@@ -21,6 +22,7 @@ pipelines:
     apiEndpoints:
       - farmicode
     policies:
+      - logger: []
       - openapi-openid-connect:
           - action:
               audience: 'https://farmicode.io'
