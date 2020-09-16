@@ -32,6 +32,9 @@ module.exports = {
               host: 'localhost',
               port: 514,
               json: true,
+              /* Keep trying forever to avoid maximum reconnection attempts crash
+               * if syslog server is not reachable. */
+              reconnectAttempts: Infinity,
             }),
           ],
           requestWhitelist: [
