@@ -27,15 +27,14 @@ pipelines:
           - action:
               audience: 'https://farmicode.io'
               openapiSpecPath: ./config/farmicode.yaml
+      - rate-limit:
+          - action:
+              max: 10
+              windowMs: 30000
+              rateLimitBy: '${req.user?.id}'
       - openapi-request-validator:
           - action:
               openapiSpecPath: ./config/farmicode.yaml
-      - rate-limit:
-          - action:
-              # Limit to 1 per 10 seconds based on the hostname
-              max: 3
-              windowMs: 30000
-              rateLimitBy: '${req.user.id}'
       - proxy:
           - action:
               serviceEndpoint: farmicode
