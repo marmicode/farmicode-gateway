@@ -67,7 +67,7 @@ module.exports = {
           /* Add openapi metadata to request. */
           await applyMetadata({ spec, req, res });
 
-          const securitySchemeList = req.openapi.schema.security ?? [];
+          const securitySchemeList = req.openapi.schema?.security ?? [];
 
           /* Find the first openidConnect scheme. */
           const schemeInfo = securitySchemeList
