@@ -43,8 +43,9 @@ module.exports = {
             'url',
             'user.id',
           ],
-          dynamicMeta: (_, res) => {
+          dynamicMeta: (req, res) => {
             return {
+              requestId: req.egContext.requestID,
               responseContentLength: res.getHeader('Content-Length'),
             };
           },
