@@ -1,16 +1,16 @@
 http:
   port: 8080
-  host: localhost
 admin:
   port: 9876
   host: localhost
 apiEndpoints:
-  farmicode:
-    host: localhost
-    paths: '/farmicode/*'
+  farms:
+    paths:
+      - /farms
+      - /farms/*
 serviceEndpoints:
-  farmicode:
-    url: https://my-json-server.typicode.com/marmicode/farmicode-api
+  farms-service:
+    url: https://my-json-server.typicode.com/marmicode/farmicode-api/farms
 policies:
   - basic-auth
   - cors
@@ -21,12 +21,12 @@ policies:
   - proxy
   - rate-limit
 pipelines:
-  - name: farmicode
+  farms:
     apiEndpoints:
-      - farmicode
+      - farms
     policies:
       - proxy:
           - action:
-              serviceEndpoint: farmicode
-              changeOrigin: true
-              stripPath: true
+              serviceEndpoint: farms-service
+              stripPath: true # Hit `/farms` instead of `/farms/farms`
+
