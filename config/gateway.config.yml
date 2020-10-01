@@ -26,7 +26,7 @@ pipelines:
       - farms
     policies:
       - proxy:
-          - action:
-              serviceEndpoint: farms-service
-              stripPath: true # Hit `/farms` instead of `/farms/farms`
+          action:
+            serviceEndpoint: farms-service
+            stripPath: true # Hit `/farms` instead of `/farms/farms`
 
