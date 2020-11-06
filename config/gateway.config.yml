@@ -20,11 +20,15 @@ policies:
   - oauth2
   - proxy
   - rate-limit
+  - '@marmicode/eg-openapi-request-validator'
 pipelines:
   farms:
     apiEndpoints:
       - farms
     policies:
+      - '@marmicode/eg-openapi-request-validator':
+          action:
+            openapiSpecPath: config/farmicode.yaml
       - proxy:
           action:
             serviceEndpoint: farms-service

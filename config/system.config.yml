@@ -5,8 +5,12 @@ db:
     namespace: EG
 
 #plugins:
-  # express-gateway-plugin-example:
-  #   param1: 'param from system.config' 
+# express-gateway-plugin-example:
+#   param1: 'param from system.config'
+
+plugins:
+  '@marmicode/eg-openapi-request-validator':
+    package: '@marmicode/eg-openapi-request-validator'
 
 crypto:
   cipherKey: sensitiveKey
