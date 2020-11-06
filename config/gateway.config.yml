@@ -20,11 +20,16 @@ policies:
   - oauth2
   - proxy
   - rate-limit
+  - '@marmicode/eg-openapi-openid-connect'
 pipelines:
   farms:
     apiEndpoints:
       - farms
     policies:
+      - '@marmicode/eg-openapi-openid-connect':
+          - action:
+              audience: 'https://api.farmicode.io'
+              openapiSpecPath: ./config/farmicode.yaml
       - proxy:
           action:
             serviceEndpoint: farms-service
